@@ -1,0 +1,75 @@
+<html>
+<head>
+  <title>Weather Network</title>
+  <style type="text/css">
+* {margin: 0; padding: 0;}
+#container {height: 4%; width:100%; font-size: 0;border-radius: 25px;border: 2px solid #73AD21;}
+#left, #middle, #right {display: inline-block; *display: inline; zoom: 1; vertical-align: top; font-size: 10px;}
+#left {width: 33%;}
+#middle {width: 33%;}
+#right {width: 33%;}
+</style>
+</head>
+<body>
+<h2 align="center">Real Time Weather</h2>
+<ul id="tempList"></ul>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="https://www.google.com/jsapi"></script>
+<script src="/socket.io/socket.io.js"></script><!-- enables client side socket comm-->
+<script src="/js/libs/jquery-3.2.1.min.js"></script><!--lightweight jQuery to enable js functionality-->
+<script src="/js/libs/moment.js"></script><!--Time Functionality-->
+<script>
+    // load chart lib
+    google.load('visualization', '1', {packages: ['corechart']});
+    // call drawChart once google charts is loaded
+    //google.setOnLoadCallback(drawChart);
+
+    function drawChart(data,titlex,domlocation){
+      var options = {
+       title: titlex,
+       curveType: 'function',
+       legend: { position: 'bottom' }
+     };
+     var chart = new google.visualization.LineChart(document.getElementById(domlocation));
+     chart.draw(data, options);
+    }
+    var socket = io.connect('http://192.168.1.109:3000');
+    socket.on('connect', function () {
+        socket.on('currTemp', function (msg) {
+            var data = new google.visualization.DataTable();
+            data.addColumn('date', 'Time');
+            data.addColumn('number', 'Temperature');
+            var datahum = new google.visualization.DataTable();
+            datahum.addColumn('date', 'Time');
+            datahum.addColumn('number', 'Humidity');
+            console.log(msg.tempArr[1].sentAt);
+            var graphtemp = []
+            var graphhum = []
+            for(let i = 0;i < msg.tempArr.length;i++){
+                var formattedTime = moment(msg.tempArr[i].sentAt).format('Y-MM-DDThh:mm:ssZ');
+                console.log(formattedTime);
+                //var d = new Date(msg.tempArr[i].sentAt)
+                //var string = d.getDate() + "/"+(d.getMonth()+1)+"/"+d.getFullYear()+"  "+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds();
+                //qwer = new Date(d.getDate())
+                graphtemp.push([new Date(msg.tempArr[i].sentAt),msg.tempArr[i].temperature])
+                graphhum.push([new Date(msg.tempArr[i].sentAt),msg.tempArr[i].humidity])
+            }
+
+            data.addRows(graphtemp);
+            datahum.addRows(graphhum);
+            drawChart(data,"Temperature","curve_chart")
+            drawChart(datahum,"Humidity","curvehum_chart")
+        });
+    });
+</script>
+  <div>
+    <div id="container">
+    <div id="left"><input id="clickMe" type="button" value="Current" onclick="doFunction(0);" /></div>
+    <div id="middle"><input id="clickMe" type="button" value="Past Week" onclick="doFunction(7);" /></div>
+    <div id="right"><input id="clickMe" type="button" value="Past Month" onclick="doFunction(30);" /></div>
+</div>
+    <div id="curve_chart" style="width: 900px; height: 200px"></div>
+    <div id="curvehum_chart" style="width: 900px; height: 200px"></div>
+  </div>
+</body>
+</html>
